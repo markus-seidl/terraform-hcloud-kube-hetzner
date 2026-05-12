@@ -117,6 +117,23 @@ subjects:
     namespace: kube-system
 
 ---
+# Cluster-Autoscaler-Config als Secret statt env-Variable.
+# Hintergrund: HCLOUD_CLUSTER_CONFIG enthält pro Pool eine ~22 KB cloud-init-
+# Kopie (~99% identisch über Pools). Bei ≥6 Pools überschreitet die env-Var
+# das Linux-Kernel-Limit MAX_ARG_STRLEN (128 KB) → CA-Pod failt mit
+# "exec ./cluster-autoscaler: argument list too long".
+# File-Mount via Secret umgeht das Limit komplett (Secrets dürfen 1 MB groß
+# sein). Der CA-Code unterstützt das bereits via HCLOUD_CLUSTER_CONFIG_FILE
+# (siehe cloudprovider/hetzner/hetzner_manager.go).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-autoscaler-config
+  namespace: kube-system
+type: Opaque
+data:
+  config.json: ${cluster_config}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -186,8 +203,11 @@ spec:
                   key: token
           - name: HCLOUD_CLOUD_INIT
             value: ${cloudinit_config}
-          - name: HCLOUD_CLUSTER_CONFIG
-            value: ${cluster_config}
+          # HCLOUD_CLUSTER_CONFIG_FILE statt HCLOUD_CLUSTER_CONFIG (env-Var):
+          # umgeht Linux MAX_ARG_STRLEN (128 KB) → keine Pool-Anzahl-Begrenzung
+          # mehr durch env-Var-Size. Siehe Secret cluster-autoscaler-config oben.
+          - name: HCLOUD_CLUSTER_CONFIG_FILE
+            value: /etc/hetzner-autoscaler/config.json
           - name: HCLOUD_SSH_KEY
             value: '${ssh_key}'
           - name: HCLOUD_IMAGE
@@ -208,8 +228,17 @@ spec:
             - name: ssl-certs
               mountPath: /etc/ssl/certs
               readOnly: true
+            - name: cluster-config
+              mountPath: /etc/hetzner-autoscaler
+              readOnly: true
           imagePullPolicy: "Always"
       volumes:
         - name: ssl-certs
           hostPath:
             path: "/etc/ssl/certs" # right place on MicroOS?
+        - name: cluster-config
+          secret:
+            secretName: cluster-autoscaler-config
+            items:
+              - key: config.json
+                path: config.json
