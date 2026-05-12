@@ -84,8 +84,14 @@ resource "terraform_data" "configure_autoscaler" {
   }
 
   # Create/Apply the definition
+  # Server-side apply avoids the 256 KB limit on the
+  # `kubectl.kubernetes.io/last-applied-configuration` annotation that
+  # client-side apply writes to every resource. With our cluster-autoscaler-
+  # config Secret holding the full pool-config JSON (can grow to hundreds
+  # of KB), client-side apply would fail with
+  # "metadata.annotations: Too long: may not be more than 262144 bytes".
   provisioner "remote-exec" {
-    inline = ["kubectl apply -f /tmp/autoscaler.yaml"]
+    inline = ["kubectl apply --server-side --force-conflicts -f /tmp/autoscaler.yaml"]
   }
 
   depends_on = [
