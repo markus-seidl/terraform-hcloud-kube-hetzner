@@ -92,8 +92,7 @@ resource "terraform_data" "configure_autoscaler" {
     hcloud_load_balancer.cluster,
     terraform_data.control_planes,
     random_password.rancher_bootstrap,
-    hcloud_volume.longhorn_volume,
-    data.hcloud_image.microos_x86_snapshot
+    hcloud_volume.longhorn_volume
   ]
 }
 moved {
