@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No unreleased changes._
+### ⚠️ Upgrade Notes
+
+- **Cluster Autoscaler Config File** - Autoscaler nodepools now mount the generated Hetzner cluster config through a Secret-backed file to avoid Kubernetes annotation size failures on large configurations. If `autoscaler_nodepools` is enabled and you override `cluster_autoscaler_version`, use `v1.33.0` or newer. The module default remains compatible.
+
+### 🚀 New Features
+
+- **Autoscaler DRA Permissions** - Added read-only Cluster Autoscaler RBAC for Kubernetes Dynamic Resource Allocation resources (`deviceclasses`, `resourceclaims`, `resourceslices`) (#2202).
+
+### 🐛 Bug Fixes
+
+- **Control Plane LB Health Check** - Fixed the Hetzner control-plane load balancer health check to use HTTP protocol with TLS enabled for the Kubernetes `/readyz` endpoint, avoiding invalid `https` protocol validation failures (#2188, #2199, #2200, #2205).
+- **Terraform 1.11 Null Validation Compatibility** - Fixed null-safe NAT router and flannel backend validation paths so Terraform 1.11 can initialize and validate default configurations without `nat_router` or `flannel_backend` set (#2197).
+- **Subnet Validation Contract** - Preserved hard validation for `subnet_amount` and `network_ipv4_cidr` cross-variable constraints without using Terraform variable validations that fail during module initialization under Terraform 1.11.
+- **NAT Router Primary IP Drift** - Removed the deprecated fixed `assignee_type` argument from NAT router primary IP resources to avoid provider warnings and future drift (#2201).
+- **MicroOS Snapshot Lookup** - Made default MicroOS snapshot lookup architecture-aware so ARM autoscaler pools do not depend on x86-only snapshot data sources (#2206).
+- **Autoscaler Large Configs** - Moved large autoscaler cluster config JSON out of the Deployment environment and into a mounted Secret file, and switched apply to server-side field management to avoid annotation size limits (#2194, #2195).
+- **Kured on Tainted Nodes** - Added a universal toleration to Kured so OS reboot management still runs on tainted nodes (#2196).
+- **Kustomize Release Assets** - Upload Kured, system-upgrade-controller, and non-Helm CCM release manifests locally before running Kustomize, avoiding remote-base build failures on nodes without sufficient network access (#2186).
+
+### 📚 Documentation
+
+- Clarified Cluster Autoscaler scale-down behavior for pods using local storage and the safe overrides available for intentional eviction (#2187).
+- Clarified that `ingress_controller = "nginx"` installs Kubernetes ingress-nginx, not the F5 NGINX Ingress Controller; use `ingress_controller = "none"` when installing F5 independently (#2204).
 
 ---
 
