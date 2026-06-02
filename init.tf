@@ -549,7 +549,7 @@ resource "terraform_data" "kustomization" {
   }
 
   provisioner "file" {
-    content     = var.hetzner_ccm_use_helm ? "# unused when hetzner_ccm_use_helm=true\n" : data.http.ccm_networks_manifest[0].response_body
+    content     = var.hetzner_ccm_use_helm ? "# unused when hetzner_ccm_use_helm=true\n" : one(data.http.ccm_networks_manifest[*].response_body)
     destination = "/var/post_install/ccm-networks.yaml"
   }
 
