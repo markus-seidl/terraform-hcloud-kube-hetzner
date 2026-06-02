@@ -188,8 +188,8 @@ variable "nat_router_subnet_index" {
   description = "Subnet index for NAT router. Default 200 is safe for most deployments. Must not conflict with control plane (counting down from 255) or agent pools (counting up from 0)."
 
   validation {
-    condition     = var.nat_router_subnet_index >= 0 && var.nat_router_subnet_index < var.subnet_amount
-    error_message = "NAT router subnet index must be between 0 and subnet_amount."
+    condition     = var.nat_router_subnet_index >= 0
+    error_message = "NAT router subnet index must be zero or greater."
   }
 }
 
@@ -199,8 +199,8 @@ variable "vswitch_subnet_index" {
   description = "Subnet index (0-255) for vSwitch. Default 201 is safe for most deployments. Must not conflict with control plane (counting down from 255) or agent pools (counting up from 0)."
 
   validation {
-    condition     = var.vswitch_subnet_index >= 0 && var.vswitch_subnet_index <= 255
-    error_message = "vSwitch subnet index must be between 0 and 255."
+    condition     = var.vswitch_subnet_index >= 0
+    error_message = "vSwitch subnet index must be zero or greater."
   }
 }
 

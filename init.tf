@@ -95,6 +95,16 @@ resource "terraform_data" "subnet_contract" {
       condition     = var.subnet_amount >= length(var.control_plane_nodepools) + length(var.agent_nodepools) + (var.nat_router == null ? 0 : (try(var.nat_router.enable_redundancy, false) ? 2 : 1))
       error_message = "Subnet amount must be large enough so that a subnet for each agent pool, each control plane pool and (if enabled) the nat router can be created in the network."
     }
+
+    precondition {
+      condition     = var.nat_router == null || var.nat_router_subnet_index < var.subnet_amount
+      error_message = "NAT router subnet index must be lower than subnet_amount when nat_router is enabled."
+    }
+
+    precondition {
+      condition     = var.vswitch_id == null || var.vswitch_subnet_index < var.subnet_amount
+      error_message = "vSwitch subnet index must be lower than subnet_amount when vswitch_id is set."
+    }
   }
 }
 
