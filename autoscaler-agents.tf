@@ -1,12 +1,12 @@
 locals {
   cluster_prefix = var.use_cluster_name_in_node_name ? "${var.cluster_name}-" : ""
   first_nodepool_snapshot_id = length(var.autoscaler_nodepools) == 0 ? "" : (
-    substr(var.autoscaler_nodepools[0].server_type, 0, 3) == "cax" ? data.hcloud_image.microos_arm_snapshot.id : data.hcloud_image.microos_x86_snapshot.id
+    substr(var.autoscaler_nodepools[0].server_type, 0, 3) == "cax" ? local.microos_arm_snapshot_id : local.microos_x86_snapshot_id
   )
 
   imageList = {
-    arm64 : tostring(data.hcloud_image.microos_arm_snapshot.id)
-    amd64 : tostring(data.hcloud_image.microos_x86_snapshot.id)
+    arm64 : tostring(local.microos_arm_snapshot_id)
+    amd64 : tostring(local.microos_x86_snapshot_id)
   }
 
   nodeConfigName = var.use_cluster_name_in_node_name ? "${var.cluster_name}-" : ""
@@ -42,6 +42,7 @@ locals {
       ipv4_subnet_id                             = data.hcloud_network.k3s.id
       snapshot_id                                = local.first_nodepool_snapshot_id
       cluster_config                             = base64encode(jsonencode(local.cluster_config))
+      cluster_config_sha256                      = sha256(jsonencode(local.cluster_config))
       firewall_id                                = hcloud_firewall.k3s.id
       cluster_name                               = local.cluster_prefix
       node_pools                                 = var.autoscaler_nodepools
@@ -84,18 +85,38 @@ resource "terraform_data" "configure_autoscaler" {
   }
 
   # Create/Apply the definition
+  # Server-side apply avoids the 256 KB limit on the
+  # `kubectl.kubernetes.io/last-applied-configuration` annotation that
+  # client-side apply writes to every resource. With our cluster-autoscaler-
+  # config Secret holding the full pool-config JSON (can grow to hundreds
+  # of KB), client-side apply would fail with
+  # "metadata.annotations: Too long: may not be more than 262144 bytes".
   provisioner "remote-exec" {
-    inline = ["kubectl apply -f /tmp/autoscaler.yaml"]
+    inline = ["kubectl apply --server-side --field-manager=kube-hetzner --force-conflicts -f /tmp/autoscaler.yaml"]
   }
 
   depends_on = [
+    terraform_data.autoscaler_version_contract,
     hcloud_load_balancer.cluster,
     terraform_data.control_planes,
     random_password.rancher_bootstrap,
-    hcloud_volume.longhorn_volume,
-    data.hcloud_image.microos_x86_snapshot
+    hcloud_volume.longhorn_volume
   ]
 }
+
+resource "terraform_data" "autoscaler_version_contract" {
+  count = length(var.autoscaler_nodepools) > 0 ? 1 : 0
+
+  input = var.cluster_autoscaler_version
+
+  lifecycle {
+    precondition {
+      condition     = try(provider::semvers::compare(trimprefix(var.cluster_autoscaler_version, "v"), "1.33.0"), -1) >= 0
+      error_message = "autoscaler_nodepools require cluster_autoscaler_version v1.33.0 or newer because kube-hetzner mounts the Hetzner cluster config through HCLOUD_CLUSTER_CONFIG_FILE."
+    }
+  }
+}
+
 moved {
   from = null_resource.configure_autoscaler
   to   = terraform_data.configure_autoscaler

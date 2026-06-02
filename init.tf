@@ -79,6 +79,35 @@ locals {
   )
 }
 
+resource "terraform_data" "subnet_contract" {
+  input = {
+    network_ipv4_cidr = var.network_ipv4_cidr
+    subnet_amount     = var.subnet_amount
+  }
+
+  lifecycle {
+    precondition {
+      condition     = pow(2, 32 - tonumber(split("/", var.network_ipv4_cidr)[1])) >= var.subnet_amount
+      error_message = "The network CIDR is too small for the requested subnet amount. Reduce subnet_amount or use a larger network."
+    }
+
+    precondition {
+      condition     = var.subnet_amount >= length(var.control_plane_nodepools) + length(var.agent_nodepools) + (var.nat_router == null ? 0 : (try(var.nat_router.enable_redundancy, false) ? 2 : 1))
+      error_message = "Subnet amount must be large enough so that a subnet for each agent pool, each control plane pool and (if enabled) the nat router can be created in the network."
+    }
+
+    precondition {
+      condition     = var.nat_router == null || var.nat_router_subnet_index < var.subnet_amount
+      error_message = "NAT router subnet index must be lower than subnet_amount when nat_router is enabled."
+    }
+
+    precondition {
+      condition     = var.vswitch_id == null || var.vswitch_subnet_index < var.subnet_amount
+      error_message = "vSwitch subnet index must be lower than subnet_amount when vswitch_id is set."
+    }
+  }
+}
+
 resource "terraform_data" "first_control_plane" {
   connection {
     user           = "root"
@@ -299,6 +328,15 @@ resource "terraform_data" "kustomization" {
     options = join("\n", [
       for option, value in local.kured_options : "${option}=${value}"
     ])
+    upstream_release_manifest_sha = sha256(join("\n", concat(
+      [
+        data.http.kured_manifest.response_body,
+        data.http.system_upgrade_controller_manifest.response_body,
+        data.http.system_upgrade_controller_crd_manifest.response_body,
+      ],
+      data.http.ccm_networks_manifest[*].response_body
+    )))
+    kured_template_sha             = filesha256("${path.module}/templates/kured.yaml.tpl")
     ccm_use_helm                   = var.hetzner_ccm_use_helm
     system_upgrade_schedule_window = jsonencode(var.system_upgrade_schedule_window)
     system_upgrade_use_drain       = tostring(var.system_upgrade_use_drain)
@@ -491,6 +529,28 @@ resource "terraform_data" "kustomization" {
         values                  = indent(4, local.rancher_values)
     })
     destination = "/var/post_install/rancher.yaml"
+  }
+
+  # Upload release-asset manifests as local files because kustomize >= 5
+  # treats GitHub releases/download URLs as git repository sources.
+  provisioner "file" {
+    content     = data.http.kured_manifest.response_body
+    destination = "/var/post_install/kured-base.yaml"
+  }
+
+  provisioner "file" {
+    content     = data.http.system_upgrade_controller_manifest.response_body
+    destination = "/var/post_install/system-upgrade-controller.yaml"
+  }
+
+  provisioner "file" {
+    content     = data.http.system_upgrade_controller_crd_manifest.response_body
+    destination = "/var/post_install/system-upgrade-controller-crd.yaml"
+  }
+
+  provisioner "file" {
+    content     = var.hetzner_ccm_use_helm ? "# unused when hetzner_ccm_use_helm=true\n" : one(data.http.ccm_networks_manifest[*].response_body)
+    destination = "/var/post_install/ccm-networks.yaml"
   }
 
   provisioner "file" {

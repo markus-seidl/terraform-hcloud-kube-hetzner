@@ -8,7 +8,7 @@ module "control_planes" {
   for_each = local.control_plane_nodes
 
   name                             = "${var.use_cluster_name_in_node_name ? "${var.cluster_name}-" : ""}${each.value.nodepool_name}"
-  microos_snapshot_id              = substr(each.value.server_type, 0, 3) == "cax" ? data.hcloud_image.microos_arm_snapshot.id : data.hcloud_image.microos_x86_snapshot.id
+  microos_snapshot_id              = substr(each.value.server_type, 0, 3) == "cax" ? local.microos_arm_snapshot_id : local.microos_x86_snapshot_id
   base_domain                      = var.base_domain
   ssh_keys                         = length(var.ssh_hcloud_key_label) > 0 ? concat([local.hcloud_ssh_key_id], data.hcloud_ssh_keys.keys_by_selector[0].ssh_keys.*.id) : [local.hcloud_ssh_key_id]
   ssh_port                         = var.ssh_port
@@ -103,7 +103,7 @@ resource "hcloud_load_balancer_service" "control_plane" {
   listen_port      = "6443"
 
   health_check {
-    protocol = "https"
+    protocol = "http"
     port     = 6443
     interval = tonumber(trimsuffix(var.load_balancer_health_check_interval, "s"))
     timeout  = tonumber(trimsuffix(var.load_balancer_health_check_timeout, "s"))
@@ -111,7 +111,7 @@ resource "hcloud_load_balancer_service" "control_plane" {
 
     http {
       path         = "/readyz"
-      tls          = false
+      tls          = true
       status_codes = ["200", "401"]
     }
   }

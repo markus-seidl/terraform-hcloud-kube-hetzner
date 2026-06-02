@@ -130,15 +130,6 @@ variable "subnet_amount" {
     condition     = floor(log(var.subnet_amount, 2)) == log(var.subnet_amount, 2)
     error_message = "Subnet amount must be a power of 2."
   }
-  validation {
-    # Host bits = 32 - prefix, must have enough bits to create subnet_amount subnets
-    condition     = pow(2, 32 - tonumber(split("/", var.network_ipv4_cidr)[1])) >= var.subnet_amount
-    error_message = "The network CIDR is too small for the requested subnet amount. Reduce subnet_amount or use a larger network."
-  }
-  validation {
-    condition     = var.subnet_amount >= length(var.control_plane_nodepools) + length(var.agent_nodepools) + (var.nat_router == null ? 0 : (try(var.nat_router.enable_redundancy, false) ? 2 : 1))
-    error_message = "Subnet amount must be large enough so that a subnet for each agent pool, each control plane pool and (if enabled) the nat router can be created in the network."
-  }
 }
 
 variable "cluster_ipv4_cidr" {
@@ -197,8 +188,8 @@ variable "nat_router_subnet_index" {
   description = "Subnet index for NAT router. Default 200 is safe for most deployments. Must not conflict with control plane (counting down from 255) or agent pools (counting up from 0)."
 
   validation {
-    condition     = var.nat_router_subnet_index >= 0 && var.nat_router_subnet_index < var.subnet_amount
-    error_message = "NAT router subnet index must be between 0 and subnet_amount."
+    condition     = var.nat_router_subnet_index >= 0
+    error_message = "NAT router subnet index must be zero or greater."
   }
 }
 
@@ -208,8 +199,8 @@ variable "vswitch_subnet_index" {
   description = "Subnet index (0-255) for vSwitch. Default 201 is safe for most deployments. Must not conflict with control plane (counting down from 255) or agent pools (counting up from 0)."
 
   validation {
-    condition     = var.vswitch_subnet_index >= 0 && var.vswitch_subnet_index <= 255
-    error_message = "vSwitch subnet index must be between 0 and 255."
+    condition     = var.vswitch_subnet_index >= 0
+    error_message = "vSwitch subnet index must be zero or greater."
   }
 }
 
@@ -1410,7 +1401,7 @@ variable "flannel_backend" {
   description = "Override the flannel backend used by k3s. When set, this takes precedence over enable_wireguard. Valid values: vxlan, host-gw, wireguard-native. See https://docs.k3s.io/networking/basic-network-options for details. Use wireguard-native for Robot nodes with vSwitch to avoid MTU issues."
 
   validation {
-    condition     = var.flannel_backend == null || contains(["vxlan", "host-gw", "wireguard-native"], var.flannel_backend)
+    condition     = var.flannel_backend == null ? true : contains(["vxlan", "host-gw", "wireguard-native"], var.flannel_backend)
     error_message = "The flannel_backend must be one of: vxlan, host-gw, wireguard-native."
   }
 }

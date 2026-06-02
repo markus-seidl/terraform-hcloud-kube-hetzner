@@ -318,6 +318,8 @@ Enable with `autoscaler_nodepools`. Powered by [Cluster Autoscaler](https://gith
 
 > ⚠️ Autoscaled nodes use a snapshot from the initial control plane. Ensure disk sizes match.
 
+Cluster Autoscaler will not scale down nodes that run pods with local storage unless explicitly configured to do so. For disposable local data, add `--skip-nodes-with-local-storage=false` to `cluster_autoscaler_extra_args` or annotate individual pods with `cluster-autoscaler.kubernetes.io/safe-to-evict: "true"`.
+
 ---
 
 ## 🛡️ High Availability
@@ -556,6 +558,8 @@ spec:
 [Full Traefik + Cert-Manager guide](https://traefik.io/blog/secure-web-applications-with-traefik-proxy-cert-manager-and-lets-encrypt/)
 
 > **Ingress-Nginx with HTTP challenge:** Add `lb_hostname = "cluster.example.org"` to work around [this known issue](https://github.com/cert-manager/cert-manager/issues/466).
+
+> **F5 NGINX Ingress Controller:** `ingress_controller = "nginx"` installs the Kubernetes ingress-nginx controller. To run the F5 controller, set `ingress_controller = "none"` and install F5's chart separately.
 </details>
 
 <details>

@@ -757,6 +757,7 @@ The example shows three control plane nodepools, each with one node, in differen
   * **Enabling:** Simply defining at least one map in this list will trigger the deployment of the Cluster Autoscaler components in your cluster.
   * **Architecture Constraint (⚠️):** "you can only choose either x86 instances or ARM server types for ALL autoscaler nodepools." This implies a limitation in how the module or the Hetzner cloud provider for Cluster Autoscaler handles mixed-architecture autoscaling groups. You must commit to one architecture (e.g., all `cx` series or all `cax` series) for the pools managed by the autoscaler.
   * **Labels/Taints Versioning (⚠️):** The ability to set `labels` and `taints` directly in the `autoscaler_nodepools` definition depends on using a sufficiently new version of the Cluster Autoscaler image.
+  * **Local Storage Scale-Down:** Cluster Autoscaler does not remove nodes that run pods with local storage by default. For workloads where local data is disposable, use `cluster_autoscaler_extra_args = ["--skip-nodes-with-local-storage=false"]` or annotate only the relevant pods with `cluster-autoscaler.kubernetes.io/safe-to-evict: "true"`.
   * **Nodepool Attributes (per map within `autoscaler_nodepools`):**
     * **`name` (String, Obligatory):** A unique name for this autoscaled nodepool.
     * **`server_type` (String, Obligatory):** The Hetzner server type for nodes created in this pool (e.g., `cx33`, `cax21`). Must adhere to the single-architecture constraint mentioned above.
@@ -1201,6 +1202,7 @@ Excellent! Let's continue our meticulous dissection.
     * `"nginx"`: Deploys the [Ingress-NGINX controller](https://kubernetes.github.io/ingress-nginx/), a popular and robust choice based on NGINX.
     * `"haproxy"`: Deploys an Ingress controller based on [HAProxy](https://www.haproxy.org/), known for high performance and reliability.
     * `"none"`: Disables the automatic deployment of any Ingress controller by this module. You would then be responsible for installing one manually if needed.
+  * **F5 NGINX Note:** `"nginx"` means the Kubernetes ingress-nginx controller, not the F5 NGINX Ingress Controller. For F5, set `ingress_controller = "none"` and install F5's chart separately.
   * **Module's Role:** The module typically deploys the chosen controller using its Helm chart and applies some Hetzner-specific optimal configurations (e.g., annotations for the Hetzner Load Balancer).
   * **Customization:** Further customization is possible via `traefik_values`, `nginx_values`, or `haproxy_values` blocks (discussed later).
 * **`ingress_target_namespace` (String, Optional):**

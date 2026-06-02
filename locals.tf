@@ -203,11 +203,11 @@ locals {
     kind       = "Kustomization"
     resources = concat(
       [
-        "https://github.com/kubereboot/kured/releases/download/${local.kured_version}/kured-${local.kured_version}-${local.kured_yaml_suffix}.yaml",
-        "https://github.com/rancher/system-upgrade-controller/releases/download/${var.sys_upgrade_controller_version}/system-upgrade-controller.yaml",
-        "https://github.com/rancher/system-upgrade-controller/releases/download/${var.sys_upgrade_controller_version}/crd.yaml"
+        "kured-base.yaml",
+        "system-upgrade-controller.yaml",
+        "system-upgrade-controller-crd.yaml"
       ],
-      var.hetzner_ccm_use_helm ? ["hcloud-ccm-helm.yaml"] : ["https://github.com/hetznercloud/hcloud-cloud-controller-manager/releases/download/${local.ccm_version}/ccm-networks.yaml"],
+      var.hetzner_ccm_use_helm ? ["hcloud-ccm-helm.yaml"] : ["ccm-networks.yaml"],
       var.disable_hetzner_csi ? [] : ["hcloud-csi.yaml"],
       lookup(local.ingress_controller_install_resources, var.ingress_controller, []),
       lookup(local.cni_install_resources, var.cni_plugin, []),
@@ -1393,7 +1393,6 @@ EOT
 
 }
 
-# Cross-variable validations that can't be done in variable validation blocks
 check "nat_router_requires_control_plane_lb" {
   assert {
     condition     = var.nat_router == null || var.use_control_plane_lb
