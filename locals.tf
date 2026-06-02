@@ -1393,21 +1393,6 @@ EOT
 
 }
 
-# Cross-variable validations that can't be done in variable validation blocks
-check "network_cidr_supports_subnet_amount" {
-  assert {
-    condition     = pow(2, 32 - tonumber(split("/", var.network_ipv4_cidr)[1])) >= var.subnet_amount
-    error_message = "The network CIDR is too small for the requested subnet amount. Reduce subnet_amount or use a larger network."
-  }
-}
-
-check "subnet_amount_covers_nodepools_and_nat_router" {
-  assert {
-    condition     = var.subnet_amount >= length(var.control_plane_nodepools) + length(var.agent_nodepools) + (var.nat_router == null ? 0 : (try(var.nat_router.enable_redundancy, false) ? 2 : 1))
-    error_message = "Subnet amount must be large enough so that a subnet for each agent pool, each control plane pool and (if enabled) the nat router can be created in the network."
-  }
-}
-
 check "nat_router_requires_control_plane_lb" {
   assert {
     condition     = var.nat_router == null || var.use_control_plane_lb

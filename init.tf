@@ -79,6 +79,25 @@ locals {
   )
 }
 
+resource "terraform_data" "subnet_contract" {
+  input = {
+    network_ipv4_cidr = var.network_ipv4_cidr
+    subnet_amount     = var.subnet_amount
+  }
+
+  lifecycle {
+    precondition {
+      condition     = pow(2, 32 - tonumber(split("/", var.network_ipv4_cidr)[1])) >= var.subnet_amount
+      error_message = "The network CIDR is too small for the requested subnet amount. Reduce subnet_amount or use a larger network."
+    }
+
+    precondition {
+      condition     = var.subnet_amount >= length(var.control_plane_nodepools) + length(var.agent_nodepools) + (var.nat_router == null ? 0 : (try(var.nat_router.enable_redundancy, false) ? 2 : 1))
+      error_message = "Subnet amount must be large enough so that a subnet for each agent pool, each control plane pool and (if enabled) the nat router can be created in the network."
+    }
+  }
+}
+
 resource "terraform_data" "first_control_plane" {
   connection {
     user           = "root"
