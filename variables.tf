@@ -1353,6 +1353,12 @@ variable "postinstall_exec" {
 }
 
 
+variable "kustomize_apply_options" {
+  type        = string
+  default     = "--wait=true"
+  description = "Flags passed to `kubectl apply` when deploying user kustomization (e.g. `--server-side --field-manager=kube-hetzner --force-conflicts --wait=true`)."
+}
+
 variable "extra_kustomize_deployment_commands" {
   type        = string
   default     = ""
