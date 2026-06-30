@@ -836,6 +836,18 @@ variable "automatically_upgrade_k3s" {
   description = "Whether to automatically upgrade k3s based on the selected channel."
 }
 
+variable "enable_system_upgrade_controller" {
+  type        = bool
+  default     = true
+  description = "Whether to deploy the system-upgrade-controller (with its CRDs and upgrade plans) used for automated k3s upgrades. Set to false to skip deploying it entirely, for example when it is managed externally (GitOps/ArgoCD). Note that automatically_upgrade_k3s only controls the k3s_upgrade node label and the upgrade activity, not whether the controller is deployed."
+}
+
+variable "enable_kured" {
+  type        = bool
+  default     = true
+  description = "Whether to deploy kured (the Kubernetes Reboot Daemon) used to perform safe, HA-aware node reboots after OS updates. Set to false to skip deploying it entirely, for example when it is managed externally (GitOps/ArgoCD). Note that automatically_upgrade_os only toggles the host transactional-update timer, not whether kured is deployed."
+}
+
 variable "system_upgrade_schedule_window" {
   type = object({
     days      = optional(list(string), [])

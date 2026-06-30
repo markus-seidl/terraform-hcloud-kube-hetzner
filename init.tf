@@ -456,7 +456,7 @@ resource "terraform_data" "kustomization" {
 
   # Upload the system upgrade controller plans config
   provisioner "file" {
-    content = templatefile(
+    content = var.enable_system_upgrade_controller ? templatefile(
       "${path.module}/templates/plans.yaml.tpl",
       {
         channel          = var.initial_k3s_channel
@@ -464,7 +464,7 @@ resource "terraform_data" "kustomization" {
         disable_eviction = !var.system_upgrade_enable_eviction
         drain            = var.system_upgrade_use_drain
         upgrade_window   = var.system_upgrade_schedule_window
-    })
+    }) : ""
     destination = "/var/post_install/plans.yaml"
   }
 
@@ -534,17 +534,17 @@ resource "terraform_data" "kustomization" {
   # Upload release-asset manifests as local files because kustomize >= 5
   # treats GitHub releases/download URLs as git repository sources.
   provisioner "file" {
-    content     = data.http.kured_manifest.response_body
+    content     = var.enable_kured ? data.http.kured_manifest.response_body : ""
     destination = "/var/post_install/kured-base.yaml"
   }
 
   provisioner "file" {
-    content     = data.http.system_upgrade_controller_manifest.response_body
+    content     = var.enable_system_upgrade_controller ? data.http.system_upgrade_controller_manifest.response_body : ""
     destination = "/var/post_install/system-upgrade-controller.yaml"
   }
 
   provisioner "file" {
-    content     = data.http.system_upgrade_controller_crd_manifest.response_body
+    content     = var.enable_system_upgrade_controller ? data.http.system_upgrade_controller_crd_manifest.response_body : ""
     destination = "/var/post_install/system-upgrade-controller-crd.yaml"
   }
 
@@ -554,12 +554,12 @@ resource "terraform_data" "kustomization" {
   }
 
   provisioner "file" {
-    content = templatefile(
+    content = var.enable_kured ? templatefile(
       "${path.module}/templates/kured.yaml.tpl",
       {
         options = local.kured_options
       }
-    )
+    ) : ""
     destination = "/var/post_install/kured.yaml"
   }
 
@@ -601,12 +601,16 @@ resource "terraform_data" "kustomization" {
       [
         # Ready, set, go for the kustomization
         "kubectl apply -k /var/post_install",
+      ],
+      var.enable_system_upgrade_controller ? [
         "echo 'Waiting for the system-upgrade-controller deployment to become available...'",
         "kubectl -n system-upgrade wait --for=condition=available --timeout=900s deployment/system-upgrade-controller",
         "sleep 7", # important as the system upgrade controller CRDs sometimes don't get ready right away, especially with Cilium.
         "kubectl -n system-upgrade apply -f /var/post_install/plans.yaml",
+      ] : [],
+      [
         # Wait for system namespace deployments to become available
-        "for ns in kube-system ${var.enable_cert_manager ? "cert-manager" : ""} ${var.enable_longhorn ? var.longhorn_namespace : ""} ${local.ingress_controller_namespace} system-upgrade; do [ -n \"$ns\" ] && kubectl get ns $ns &>/dev/null && kubectl -n $ns wait deployment --all --for=condition=Available --timeout=300s || true; done",
+        "for ns in kube-system ${var.enable_cert_manager ? "cert-manager" : ""} ${var.enable_longhorn ? var.longhorn_namespace : ""} ${local.ingress_controller_namespace} ${var.enable_system_upgrade_controller ? "system-upgrade" : ""}; do [ -n \"$ns\" ] && kubectl get ns $ns &>/dev/null && kubectl -n $ns wait deployment --all --for=condition=Available --timeout=300s || true; done",
         # Wait for helm install jobs to complete (only in namespaces that have jobs)
         "for ns in kube-system ${var.enable_longhorn ? var.longhorn_namespace : ""}; do [ -n \"$ns\" ] && kubectl get ns $ns &>/dev/null && kubectl -n $ns get job -o name 2>/dev/null | grep -q . && kubectl -n $ns wait job --all --for=condition=Complete --timeout=300s || true; done"
       ],

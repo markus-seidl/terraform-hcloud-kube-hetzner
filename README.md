@@ -356,6 +356,23 @@ automatically_upgrade_os = false
 automatically_upgrade_k3s = false
 ```
 
+> **Note:** these two flags only stop the upgrade *activity* — they do **not** undeploy the tooling.
+> `automatically_upgrade_os` toggles the host `transactional-update` timer (kured stays deployed), and
+> `automatically_upgrade_k3s` only controls the `k3s_upgrade` node label (the system-upgrade-controller stays deployed).
+
+### Skip Deploying the Upgrade Tooling
+
+To not deploy the components at all (for example when managing them externally via GitOps/ArgoCD), use the
+dedicated deploy toggles. Both default to `true`, so existing clusters are unaffected.
+
+```tf
+# Do not deploy kured (the reboot daemon)
+enable_kured = false
+
+# Do not deploy the system-upgrade-controller (with its CRDs and plans)
+enable_system_upgrade_controller = false
+```
+
 <details>
 <summary><strong>Manual upgrade commands</strong></summary>
 
