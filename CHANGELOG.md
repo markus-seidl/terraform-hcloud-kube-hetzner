@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No unreleased changes._
+### 🚀 New Features
+
+- **Configurable User Kustomization Apply Flags** - Added `kustomize_apply_options` for passing validated `kubectl apply` flags such as server-side apply to user kustomizations. Defaults to `["--wait=true"]` to preserve existing behavior (#2218).
 
 ---
 

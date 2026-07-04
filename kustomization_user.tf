@@ -46,6 +46,10 @@ moved {
 resource "terraform_data" "kustomization_user_deploy" {
   count = length(local.user_kustomization_templates) > 0 ? 1 : 0
 
+  triggers_replace = {
+    apply_options = sha1(join(" ", var.kustomize_apply_options))
+  }
+
   connection {
     user           = "root"
     private_key    = var.ssh_private_key

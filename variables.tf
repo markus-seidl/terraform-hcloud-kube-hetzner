@@ -1366,9 +1366,18 @@ variable "postinstall_exec" {
 
 
 variable "kustomize_apply_options" {
-  type        = string
-  default     = "--wait=true"
-  description = "Flags passed to `kubectl apply` when deploying user kustomization (e.g. `--server-side --field-manager=kube-hetzner --force-conflicts --wait=true`)."
+  type        = list(string)
+  default     = ["--wait=true"]
+  nullable    = false
+  description = "Flags passed to `kubectl apply` when deploying user kustomization (e.g. `[\"--server-side\", \"--field-manager=kube-hetzner\", \"--force-conflicts\", \"--wait=true\"]`)."
+
+  validation {
+    condition = alltrue([
+      for option in var.kustomize_apply_options :
+      can(regex("^--[A-Za-z0-9][A-Za-z0-9-]*(=[^\\s'\"$;&|<>`\\\\]*)?$", option))
+    ])
+    error_message = "Each kustomize_apply_options entry must be a single kubectl flag token, for example \"--server-side\" or \"--field-manager=kube-hetzner\"."
+  }
 }
 
 variable "extra_kustomize_deployment_commands" {
