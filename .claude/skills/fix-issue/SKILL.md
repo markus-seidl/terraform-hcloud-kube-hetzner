@@ -204,6 +204,7 @@ If the fix originates from a community member's work — a patch posted in the i
 
 - If their work exists as commits (fork branch, closed PR): `git cherry-pick` those commits FIRST (keeps them as `Author:`), then add your changes as separate commits on top. Never squash their authorship away (see the `review-pr` skill for merge-method rules).
 - If their work was only a snippet/diff/instructions in the issue thread: add a `Co-authored-by: Name <email>` trailer to your commit (use their GitHub noreply email `<id>+<login>@users.noreply.github.com` if no public email), and credit their handle in the commit body and changelog entry.
+- GitHub matches `Co-authored-by` by EXACT email. Never guess the numeric id — fetch it first: `gh api users/<login> --jq .id`. A wrong id silently drops the credit.
 - Always reference the issue/PR numbers in the changelog entry so the credit is visible in prose too.
 
 ## Security Review (from CLAUDE.md)
