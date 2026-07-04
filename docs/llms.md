@@ -2332,9 +2332,17 @@ Locked and loaded! Let's continue the detailed exploration.
 **Section 2.21: Kustomize and Post-Deployment Operations**
 
 ```terraform
+  # Flags for `kubectl apply` when deploying user kustomization (e.g. large CRDs that exceed the annotation size limit).
+  # kustomize_apply_options = ["--server-side", "--field-manager=kube-hetzner", "--force-conflicts", "--wait=true"]
+
   # Extra commands to be executed after the `kubectl apply -k` (useful for post-install actions, e.g. wait for CRD, apply additional manifests, etc.).
   # extra_kustomize_deployment_commands=""
 ```
+
+* **`kustomize_apply_options` (List of Strings, Optional):**
+  * **Default:** `["--wait=true"]`
+  * **Purpose:** Extra flags appended to the user kustomization `kubectl apply -k <dir>` command.
+  * **Use Case:** Server-side apply for large CRDs (e.g. Argo CD `ApplicationSet`) that exceed the 262144-byte `last-applied-configuration` annotation limit.
 
 * **`extra_kustomize_deployment_commands` (String or List of Strings, Optional):**
   * **Purpose:** Allows you to specify shell commands that will be executed *after* the module has run its main Kustomize deployment (which applies manifests for core components like CCM, CSI, Ingress, etc., based on your selections).

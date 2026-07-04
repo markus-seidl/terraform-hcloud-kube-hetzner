@@ -433,9 +433,10 @@ Change folder name with `extra_kustomize_folder`. See [example](examples/kustomi
 <details>
 <summary><strong>Custom post-install actions (ArgoCD, etc.)</strong></summary>
 
-For CRD-dependent applications:
+For CRD-dependent applications (use `kustomize_apply_options` with `--server-side` when CRDs hit the annotation size limit):
 
 ```tf
+kustomize_apply_options = ["--server-side", "--field-manager=kube-hetzner", "--force-conflicts", "--wait=true"]
 extra_kustomize_deployment_commands = <<-EOT
   kubectl -n argocd wait --for condition=established --timeout=120s crd/appprojects.argoproj.io
   kubectl -n argocd wait --for condition=established --timeout=120s crd/applications.argoproj.io
