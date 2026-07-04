@@ -714,6 +714,22 @@ module "kube-hetzner" {
   # Note: automatically_upgrade_k3s only controls the k3s_upgrade node label and the upgrade activity; the
   # system-upgrade-controller (with its CRDs and plans) is still deployed. To skip deploying it entirely
   # (e.g. when managing it externally via GitOps/ArgoCD), set the flag below to false. The default is "true".
+  # If automatically_upgrade_k3s remains true while this is false, nodes may keep harmless inert k3s_upgrade
+  # labels because no controller/plans act on them.
+  #
+  # Disabling this after it was deployed does not remove existing resources; kubectl apply does not prune.
+  # Manual cleanup if you want it gone from an existing cluster:
+  # kubectl -n system-upgrade delete plan k3s-agent k3s-server --ignore-not-found
+  # kubectl -n system-upgrade delete deployment system-upgrade-controller --ignore-not-found
+  # kubectl -n system-upgrade delete configmap default-controller-env --ignore-not-found
+  # kubectl -n system-upgrade delete serviceaccount system-upgrade --ignore-not-found
+  # kubectl -n system-upgrade delete role system-upgrade-controller --ignore-not-found
+  # kubectl -n system-upgrade delete rolebinding system-upgrade --ignore-not-found
+  # kubectl delete clusterrole system-upgrade-controller system-upgrade-controller-drainer --ignore-not-found
+  # kubectl delete clusterrolebinding system-upgrade system-upgrade-drainer --ignore-not-found
+  # kubectl delete namespace system-upgrade --ignore-not-found
+  # Optional after all Plan resources are gone:
+  # kubectl delete crd plans.upgrade.cattle.io --ignore-not-found
   # enable_system_upgrade_controller = false
 
   # By default nodes are drained before k3s upgrade, which will delete and transfer all pods to other nodes.
@@ -736,6 +752,14 @@ module "kube-hetzner" {
   # Note: automatically_upgrade_os only toggles the host transactional-update timer; the kured DaemonSet is still
   # deployed. To skip deploying kured entirely (e.g. when managing reboots externally via GitOps/ArgoCD), set the
   # flag below to false. The default is "true".
+  # WARNING: if automatically_upgrade_os remains true while this is false, transactional-update timers stay active
+  # with no module-managed reboot orchestration. Disable automatically_upgrade_os too, or manage reboots externally.
+  #
+  # Disabling this after it was deployed does not remove existing resources; kubectl apply does not prune.
+  # Manual cleanup if you want it gone from an existing cluster:
+  # kubectl -n kube-system delete ds kured --ignore-not-found
+  # kubectl -n kube-system delete serviceaccount kured role kured rolebinding kured --ignore-not-found
+  # kubectl delete clusterrole kured clusterrolebinding kured --ignore-not-found
   # enable_kured = false
 
   # If you need more control over kured and the reboot behaviour, you can pass additional options to kured.

@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_No unreleased changes._
+### 🚀 New Features
+
+- **Optional Upgrade Tooling Deployment** - Added `enable_kured` and `enable_system_upgrade_controller` toggles for clusters that manage reboot orchestration or system-upgrade-controller externally. Disabling these flags omits the resources from future kustomization applies but does not prune already-deployed kured/system-upgrade-controller objects from existing clusters; remove those manually if needed. The kustomization trigger state now includes these toggles and the rendered `kustomization.yaml` hash, so existing clusters will see one idempotent `kubectl apply -k` re-run on upgrade; future toggle flips correctly re-run the kustomization provisioners (#2223).
 
 ---
 

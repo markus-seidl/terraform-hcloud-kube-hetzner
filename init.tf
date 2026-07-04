@@ -336,11 +336,14 @@ resource "terraform_data" "kustomization" {
       ],
       data.http.ccm_networks_manifest[*].response_body
     )))
-    kured_template_sha             = filesha256("${path.module}/templates/kured.yaml.tpl")
-    ccm_use_helm                   = var.hetzner_ccm_use_helm
-    system_upgrade_schedule_window = jsonencode(var.system_upgrade_schedule_window)
-    system_upgrade_use_drain       = tostring(var.system_upgrade_use_drain)
-    system_upgrade_enable_eviction = tostring(var.system_upgrade_enable_eviction)
+    kustomization_yaml_sha           = sha256(local.kustomization_backup_yaml)
+    kured_template_sha               = filesha256("${path.module}/templates/kured.yaml.tpl")
+    enable_kured                     = tostring(var.enable_kured)
+    enable_system_upgrade_controller = tostring(var.enable_system_upgrade_controller)
+    ccm_use_helm                     = var.hetzner_ccm_use_helm
+    system_upgrade_schedule_window   = jsonencode(var.system_upgrade_schedule_window)
+    system_upgrade_use_drain         = tostring(var.system_upgrade_use_drain)
+    system_upgrade_enable_eviction   = tostring(var.system_upgrade_enable_eviction)
   }
 
   connection {

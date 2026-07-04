@@ -374,8 +374,10 @@ automatically_upgrade_k3s = false
 
 ### Skip Deploying the Upgrade Tooling
 
-To not deploy the components at all (for example when managing them externally via GitOps/ArgoCD), use the
-dedicated deploy toggles. Both default to `true`, so existing clusters are unaffected.
+To omit these components from the module kustomization (for example when managing them externally via
+GitOps/ArgoCD), use the dedicated deploy toggles. Both default to `true`, so existing clusters keep the same
+default deployment behavior. The release that wires these toggles into the kustomization trigger state may cause
+one idempotent `kubectl apply -k` re-run on the first apply after upgrade.
 
 ```tf
 # Do not deploy kured (the reboot daemon)
@@ -383,6 +385,49 @@ enable_kured = false
 
 # Do not deploy the system-upgrade-controller (with its CRDs and plans)
 enable_system_upgrade_controller = false
+```
+
+These toggles only change what the module includes in future kustomization applies. They do **not** remove
+objects that were already deployed to an existing cluster because `kubectl apply -k` does not prune omitted
+resources.
+
+Interaction warnings:
+
+- `automatically_upgrade_k3s = true` with `enable_system_upgrade_controller = false` can leave `k3s_upgrade`
+  node labels behind. They are harmless/inert without the controller and plans.
+- `automatically_upgrade_os = true` with `enable_kured = false` leaves the host `transactional-update` timers
+  active with **no module-managed reboot orchestration**. Disable automatic OS upgrades too, or manage reboot
+  coordination externally.
+
+If you disable these toggles on an existing cluster and want the already-applied resources removed, clean them
+up manually:
+
+**Remove kured:**
+
+```sh
+kubectl -n kube-system delete ds kured --ignore-not-found
+kubectl -n kube-system delete serviceaccount kured role kured rolebinding kured --ignore-not-found
+kubectl delete clusterrole kured clusterrolebinding kured --ignore-not-found
+```
+
+**Remove system-upgrade-controller:**
+
+```sh
+kubectl -n system-upgrade delete plan k3s-agent k3s-server --ignore-not-found
+kubectl -n system-upgrade delete deployment system-upgrade-controller --ignore-not-found
+kubectl -n system-upgrade delete configmap default-controller-env --ignore-not-found
+kubectl -n system-upgrade delete serviceaccount system-upgrade --ignore-not-found
+kubectl -n system-upgrade delete role system-upgrade-controller --ignore-not-found
+kubectl -n system-upgrade delete rolebinding system-upgrade --ignore-not-found
+kubectl delete clusterrole system-upgrade-controller system-upgrade-controller-drainer --ignore-not-found
+kubectl delete clusterrolebinding system-upgrade system-upgrade-drainer --ignore-not-found
+kubectl delete namespace system-upgrade --ignore-not-found
+```
+
+Optionally remove the system-upgrade-controller CRD after all `Plan` resources are gone:
+
+```sh
+kubectl delete crd plans.upgrade.cattle.io --ignore-not-found
 ```
 
 <details>

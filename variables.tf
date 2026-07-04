@@ -845,21 +845,21 @@ variable "system_upgrade_use_drain" {
 variable "automatically_upgrade_k3s" {
   type        = bool
   default     = true
-  description = "Whether to automatically upgrade k3s based on the selected channel."
+  description = "Whether to automatically upgrade k3s based on the selected channel. This controls the k3s_upgrade node label and upgrade activity; it does not control deployment of the system-upgrade-controller. If enable_system_upgrade_controller is false while this remains true, nodes can keep harmless inert k3s_upgrade labels because no controller/plans act on them."
 }
 
 variable "enable_system_upgrade_controller" {
   type        = bool
   default     = true
   nullable    = false
-  description = "Whether to deploy the system-upgrade-controller (with its CRDs and upgrade plans) used for automated k3s upgrades. Set to false to skip deploying it entirely, for example when it is managed externally (GitOps/ArgoCD). Note that automatically_upgrade_k3s only controls the k3s_upgrade node label and the upgrade activity, not whether the controller is deployed."
+  description = "Whether to include the system-upgrade-controller, its CRDs, and upgrade plans in the module kustomization used for automated k3s upgrades. Set to false to skip deploying it on new clusters or on the next kustomization re-run, for example when it is managed externally (GitOps/ArgoCD). Disabling this does not prune/remove system-upgrade-controller resources already applied to an existing cluster. If automatically_upgrade_k3s is true while this is false, nodes can keep harmless inert k3s_upgrade labels because no controller/plans act on them."
 }
 
 variable "enable_kured" {
   type        = bool
   default     = true
   nullable    = false
-  description = "Whether to deploy kured (the Kubernetes Reboot Daemon) used to perform safe, HA-aware node reboots after OS updates. Set to false to skip deploying it entirely, for example when it is managed externally (GitOps/ArgoCD). Note that automatically_upgrade_os only toggles the host transactional-update timer, not whether kured is deployed."
+  description = "Whether to include kured (the Kubernetes Reboot Daemon) in the module kustomization used to perform safe, HA-aware node reboots after OS updates. Set to false to skip deploying it on new clusters or on the next kustomization re-run, for example when it is managed externally (GitOps/ArgoCD). Disabling this does not prune/remove kured resources already applied to an existing cluster. WARNING: if automatically_upgrade_os is true while this is false, host transactional-update timers remain active but there is no module-managed reboot orchestration."
 }
 
 variable "system_upgrade_schedule_window" {
@@ -912,7 +912,7 @@ variable "system_upgrade_schedule_window" {
 variable "automatically_upgrade_os" {
   type        = bool
   default     = true
-  description = "Whether to enable or disable automatic os updates. Defaults to true. Should be disabled for single-node clusters"
+  description = "Whether to enable or disable automatic OS updates through the host transactional-update timer. Defaults to true. Should be disabled for single-node clusters. This does not control deployment of kured. WARNING: if enable_kured is false while this remains true, updates can keep running but there is no module-managed reboot orchestration."
 }
 
 variable "extra_firewall_rules" {
