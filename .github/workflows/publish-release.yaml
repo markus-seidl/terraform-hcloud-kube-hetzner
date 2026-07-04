@@ -56,8 +56,9 @@ jobs:
             echo "* ${name}"
           done)
 
-          # Also extract Co-authored-by names
-          COAUTHORS=$(git log "${RANGE}" --format='%b' | grep -i "co-authored-by" | sed 's/.*: //' | sed 's/ <.*//' | sort -u | while read -r name; do
+          # Also extract Co-authored-by names via git's trailer parser (grepping raw
+          # bodies matches prose that merely mentions "Co-authored-by" and emits garbage)
+          COAUTHORS=$(git log "${RANGE}" --format='%(trailers:key=Co-authored-by,valueonly=true)' | sed 's/ <[^>]*>$//' | sed '/^$/d' | sort -u | while read -r name; do
             [ -n "$name" ] && echo "* ${name}"
           done)
 
